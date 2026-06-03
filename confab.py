@@ -10,10 +10,12 @@ import json
 import hashlib
 import os
 import re
+import sqlite3
 import sys
 import time
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from dataclasses import dataclass, field
+from pathlib import Path
 
 # Optional deps — graceful fallback
 try:
@@ -28,6 +30,35 @@ DEFAULT_N = 5
 DEFAULT_TEMP = 0.8
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_PORT = 8080
+DB_PATH = Path(os.environ.get("CONFAB_DB", Path.home() / ".confab" / "history.db"))
+
+# --- Database ---
+
+def get_db() -> sqlite3.Connection:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(str(DB_PATH))
+    db.execute("""CREATE TABLE IF NOT EXISTS checks (
+        id INTEGER PRIMARY KEY,
+        timestamp TEXT DEFAULT (datetime('now')),
+        command TEXT,
+        prompt TEXT,
+        model TEXT,
+        samples INTEGER,
+        elapsed REAL,
+        claims_json TEXT,
+        verdict TEXT
+    )""")
+    db.commit()
+    return db
+
+
+def save_check(command: str, prompt: str, model: str, samples: int, elapsed: float, claims: list, verdict: str = None):
+    db = get_db()
+    claims_json = json.dumps([{"text": c.text, "confidence": c.confidence, "level": c.level, "support": c.support_count, "total": c.total_samples} for c in claims]) if claims else "[]"
+    db.execute("INSERT INTO checks (command, prompt, model, samples, elapsed, claims_json, verdict) VALUES (?,?,?,?,?,?,?)",
+               (command, prompt, model, samples, elapsed, claims_json, verdict))
+    db.commit()
+    db.close()
 
 # --- Data Types ---
 
@@ -92,16 +123,43 @@ async def call_llm(prompt: str, model: str, temperature: float, api_key: str, ba
 
 
 async def call_llm_n(prompt: str, n: int, model: str, temperature: float, api_key: str, base_url: str) -> list:
-    tasks = [call_llm(prompt, model, temperature, api_key, base_url) for _ in range(n)]
-    return await asyncio.gather(*tasks)
+    done = 0
+    async def _call_with_progress():
+        nonlocal done
+        result = await call_llm(prompt, model, temperature, api_key, base_url)
+        done += 1
+        print(f"\r   ⏳ {done}/{n} responses received", end="", flush=True)
+        return result
+    tasks = [_call_with_progress() for _ in range(n)]
+    results = await asyncio.gather(*tasks)
+    print()  # newline after progress
+    return results
 
 # --- Self-Consistency Engine ---
 
 def extract_claims(text: str) -> list:
-    """Split text into sentence-level claims."""
-    # Split on sentence boundaries
-    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-    return [s.strip() for s in sentences if len(s.strip()) > 10]
+    """Split text into sentence-level claims. Handles prose, bullets, numbered lists."""
+    claims = []
+    # Split into lines first (handles bullet/numbered lists)
+    lines = text.strip().split('\n')
+    for line in lines:
+        line = line.strip()
+        # Strip bullet/number prefix
+        line = re.sub(r'^[\-\*•]\s*', '', line)
+        line = re.sub(r'^\d+[\.\)]\s*', '', line)
+        if not line:
+            continue
+        # Split on sentence boundaries within the line
+        # Handle colon-separated claims (e.g. "Created by: Guido van Rossum")
+        if ':' in line and len(line.split(':')) == 2:
+            claims.append(line.strip())
+        else:
+            sentences = re.split(r'(?<=[.!?])\s+', line)
+            for s in sentences:
+                s = s.strip()
+                if len(s) > 10:
+                    claims.append(s)
+    return claims
 
 
 def normalize_claim(claim: str) -> str:
@@ -162,6 +220,13 @@ def annotate_response(claims: list) -> str:
 async def cmd_check(args):
     """Run self-consistency check on a prompt."""
     prompt = args.prompt
+    # Support stdin: confab check -
+    if prompt == "-":
+        prompt = sys.stdin.read().strip()
+        if not prompt:
+            print("ERROR: No input received from stdin", file=sys.stderr)
+            sys.exit(1)
+    
     n = args.n
     model = args.model
     temperature = args.temperature
@@ -194,6 +259,9 @@ async def cmd_check(args):
     low = sum(1 for c in claims if c.level == "low")
     print(f"📊 Confidence: {high} high, {med} medium, {low} low")
     
+    # Save to history
+    save_check("check", prompt, model, n, elapsed, claims)
+    
     if args.json:
         result = {
             "prompt": prompt,
@@ -208,7 +276,10 @@ async def cmd_check(args):
 async def cmd_verify(args):
     """Verify a single claim using cross-model check."""
     claim = args.claim
+    if claim == "-":
+        claim = sys.stdin.read().strip()
     model = args.model
+    cross_model = getattr(args, 'cross_model', None)
     
     print(f"🔍 Verifying: {claim}\n")
     
@@ -223,32 +294,98 @@ Respond with:
 
 Then explain briefly."""
     
+    start = time.time()
+    
     if args.demo:
         response = DEMO_VERIFY_RESPONSES[0]
+        cross_response = DEMO_VERIFY_RESPONSES[1] if cross_model else None
     else:
         api_key = args.api_key or os.environ.get("OPENAI_API_KEY", "")
         if not api_key:
             print("ERROR: Set OPENAI_API_KEY or pass --api-key", file=sys.stderr)
             sys.exit(1)
         response = await call_llm(verify_prompt, model, 0.0, api_key, args.base_url)
+        cross_response = None
+        if cross_model:
+            print(f"   🔄 Cross-checking with {cross_model}...")
+            cross_response = await call_llm(verify_prompt, cross_model, 0.0, api_key, args.base_url)
+    
+    elapsed = time.time() - start
     
     # Determine verdict
-    resp_upper = response.upper()
-    if "SUPPORTED" in resp_upper:
-        icon = "🟢"
-        verdict = "SUPPORTED"
-    elif "REFUTED" in resp_upper:
-        icon = "🔴"
-        verdict = "REFUTED"
-    else:
-        icon = "🟡"
-        verdict = "UNCERTAIN"
+    def get_verdict(text):
+        t = text.upper()
+        if "SUPPORTED" in t: return "SUPPORTED"
+        if "REFUTED" in t: return "REFUTED"
+        return "UNCERTAIN"
     
-    print(f"{icon} Verdict: {verdict}")
+    verdict = get_verdict(response)
+    icon = {"SUPPORTED": "🟢", "REFUTED": "🔴", "UNCERTAIN": "🟡"}[verdict]
+    
+    print(f"{icon} Verdict ({model}): {verdict}")
     print(f"\n{response}")
     
+    if cross_model and cross_response:
+        cross_verdict = get_verdict(cross_response)
+        cross_icon = {"SUPPORTED": "🟢", "REFUTED": "🔴", "UNCERTAIN": "🟡"}[cross_verdict]
+        print(f"\n{cross_icon} Cross-check ({cross_model}): {cross_verdict}")
+        print(f"\n{cross_response}")
+        
+        if verdict != cross_verdict:
+            print(f"\n⚠️  Models DISAGREE — treat with caution")
+        else:
+            print(f"\n✅ Models AGREE")
+        verdict = f"{verdict}/{cross_verdict}"
+    
+    # Save to history
+    save_check("verify", claim, model, 1, elapsed, [], verdict)
+    
     if args.json:
-        print(f"\n{json.dumps({'claim': claim, 'verdict': verdict, 'explanation': response}, indent=2)}")
+        result = {'claim': claim, 'verdict': verdict, 'explanation': response}
+        if cross_model and cross_response:
+            result['cross_model'] = cross_model
+            result['cross_explanation'] = cross_response
+        print(f"\n{json.dumps(result, indent=2)}")
+
+
+def cmd_history(args):
+    """Show past checks and verifications."""
+    db = get_db()
+    limit = args.limit if hasattr(args, 'limit') else 20
+    
+    if hasattr(args, 'clear') and args.clear:
+        db.execute("DELETE FROM checks")
+        db.commit()
+        print("🗑  History cleared.")
+        db.close()
+        return
+    
+    rows = db.execute("SELECT id, timestamp, command, prompt, model, samples, elapsed, claims_json, verdict FROM checks ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
+    db.close()
+    
+    if not rows:
+        print("No history yet. Run `confab check` or `confab verify` first.")
+        return
+    
+    print(f"📜 Last {len(rows)} entries (newest first)\n")
+    for row in rows:
+        id_, ts, cmd, prompt, model, samples, elapsed, claims_json, verdict = row
+        prompt_short = prompt[:60] + "..." if len(prompt) > 60 else prompt
+        
+        if cmd == "check":
+            claims = json.loads(claims_json)
+            high = sum(1 for c in claims if c["level"] == "high")
+            med = sum(1 for c in claims if c["level"] == "medium")
+            low = sum(1 for c in claims if c["level"] == "low")
+            print(f"  #{id_} [{ts}] check ({model}, n={samples}, {elapsed:.1f}s)")
+            print(f"     {prompt_short}")
+            print(f"     → {high}🟢 {med}🟡 {low}🔴")
+        elif cmd == "verify":
+            icon = {"SUPPORTED": "🟢", "REFUTED": "🔴", "UNCERTAIN": "🟡"}.get(verdict.split("/")[0] if verdict else "", "❓")
+            print(f"  #{id_} [{ts}] verify ({model})")
+            print(f"     {prompt_short}")
+            print(f"     → {icon} {verdict}")
+        print()
 
 
 class ConfabProxyHandler(BaseHTTPRequestHandler):
@@ -342,7 +479,7 @@ def main():
         prog="confab",
         description="Inline hallucination confidence via self-consistency.",
     )
-    parser.add_argument("--version", action="version", version="confab 0.1.0")
+    parser.add_argument("--version", action="version", version="confab 0.2.0")
     
     # Global options
     parser.add_argument("--model", "-m", default=DEFAULT_MODEL, help=f"Model to use (default: {DEFAULT_MODEL})")
@@ -357,15 +494,21 @@ def main():
     
     # check
     p_check = sub.add_parser("check", help="Run self-consistency check on a prompt")
-    p_check.add_argument("prompt", help="The prompt to check")
+    p_check.add_argument("prompt", help="The prompt to check (use '-' for stdin)")
     
     # verify
     p_verify = sub.add_parser("verify", help="Verify a single claim")
-    p_verify.add_argument("claim", help="The claim to verify")
+    p_verify.add_argument("claim", help="The claim to verify (use '-' for stdin)")
+    p_verify.add_argument("--cross-model", help="Cross-check with a second model (e.g. gpt-4o)")
     
     # proxy
     p_proxy = sub.add_parser("proxy", help="Start OpenAI-compatible proxy")
     p_proxy.add_argument("--port", "-p", type=int, default=DEFAULT_PORT, help=f"Port (default: {DEFAULT_PORT})")
+    
+    # history
+    p_hist = sub.add_parser("history", help="Review past checks and verifications")
+    p_hist.add_argument("--limit", "-l", type=int, default=20, help="Number of entries to show")
+    p_hist.add_argument("--clear", action="store_true", help="Clear all history")
     
     args = parser.parse_args()
     
@@ -379,6 +522,8 @@ def main():
         asyncio.run(cmd_verify(args))
     elif args.command == "proxy":
         cmd_proxy(args)
+    elif args.command == "history":
+        cmd_history(args)
 
 
 if __name__ == "__main__":

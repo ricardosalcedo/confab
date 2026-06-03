@@ -27,6 +27,10 @@ confab check "What year was the first iPhone released?"
 
 # More samples = more reliable
 confab -n 10 check "Explain quantum entanglement"
+
+# Pipe from stdin
+echo "Is the sky blue?" | confab check -
+cat question.txt | confab check -
 ```
 
 Output:
@@ -40,7 +44,25 @@ Output:
 
 ```bash
 confab verify "The Great Wall of China is visible from space"
-confab --demo verify "Python was created by Guido van Rossum"
+
+# Cross-model verification (ask two models)
+confab verify "Python was released in 1991" --cross-model gpt-4o
+
+# From stdin
+echo "Earth is flat" | confab verify -
+```
+
+### History
+
+```bash
+# Review past checks
+confab history
+
+# Show last 5
+confab history --limit 5
+
+# Clear history
+confab history --clear
 ```
 
 ### Proxy mode
@@ -65,6 +87,7 @@ curl http://localhost:8080/v1/chat/completions \
 | `--temperature, -t` | 0.8 | Sampling temperature |
 | `--api-key, -k` | $OPENAI_API_KEY | API key |
 | `--base-url` | OpenAI | API base URL (for local models) |
+| `--cross-model` | - | Second model for cross-verification |
 | `--demo` | off | Use canned responses |
 | `--json` | off | Machine-readable output |
 

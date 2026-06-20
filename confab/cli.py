@@ -8,9 +8,9 @@ import sys
 import time
 
 import confab
-from confab.db import save_check, get_history, clear_history
-from confab.engine import score_claims, annotate_response
-from confab.llm import call_llm, call_llm_n, DEMO_RESPONSES, DEMO_VERIFY_RESPONSES
+from confab.db import clear_history, get_history, save_check
+from confab.engine import annotate_response, score_claims
+from confab.llm import DEMO_RESPONSES, DEMO_VERIFY_RESPONSES, call_llm, call_llm_n
 from confab.proxy import serve as proxy_serve
 
 DEFAULT_MODEL = "gpt-4o-mini"
@@ -40,8 +40,10 @@ def _require_api_key(args) -> str:
 
 def _get_verdict(text: str) -> str:
     t = text.upper()
-    if "SUPPORTED" in t: return "SUPPORTED"
-    if "REFUTED" in t: return "REFUTED"
+    if "SUPPORTED" in t:
+        return "SUPPORTED"
+    if "REFUTED" in t:
+        return "REFUTED"
     return "UNCERTAIN"
 
 
@@ -77,7 +79,14 @@ async def cmd_check(args):
     save_check("check", prompt, model, n, elapsed, claims)
 
     if args.json:
-        print(f"\n{json.dumps({'prompt': prompt, 'model': model, 'samples': n, 'elapsed': elapsed, 'claims': [{'text': c.text, 'confidence': c.confidence, 'level': c.level, 'support': c.support_count} for c in claims]}, indent=2)}")
+        data = {
+            "prompt": prompt, "model": model, "samples": n, "elapsed": elapsed,
+            "claims": [
+                {"text": c.text, "confidence": c.confidence, "level": c.level, "support": c.support_count}
+                for c in claims
+            ],
+        }
+        print(f"\n{json.dumps(data, indent=2)}")
 
 
 async def cmd_verify(args):

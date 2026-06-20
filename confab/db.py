@@ -22,22 +22,31 @@ _SCHEMA = """CREATE TABLE IF NOT EXISTS checks (
 )"""
 
 
-def _connect() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(str(DB_PATH))
+def _connect(db_path: Path | None = None) -> sqlite3.Connection:
+    path = db_path or DB_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(str(path))
     db.execute(_SCHEMA)
     db.commit()
     return db
 
 
-def save_check(command: str, prompt: str, model: str, samples: int, elapsed: float,
-               claims: list[Claim] = None, verdict: str = None):
+def save_check(
+    command: str,
+    prompt: str,
+    model: str,
+    samples: int,
+    elapsed: float,
+    claims: list[Claim] | None = None,
+    verdict: str | None = None,
+    db_path: Path | None = None,
+) -> None:
     """Persist a check or verify result."""
     claims_json = json.dumps([
         {"text": c.text, "confidence": c.confidence, "level": c.level, "support": c.support_count}
         for c in (claims or [])
     ])
-    db = _connect()
+    db = _connect(db_path)
     db.execute(
         "INSERT INTO checks (command, prompt, model, samples, elapsed, claims_json, verdict) VALUES (?,?,?,?,?,?,?)",
         (command, prompt, model, samples, elapsed, claims_json, verdict),
@@ -46,9 +55,9 @@ def save_check(command: str, prompt: str, model: str, samples: int, elapsed: flo
     db.close()
 
 
-def get_history(limit: int = 20) -> list[dict]:
+def get_history(limit: int = 20, db_path: Path | None = None) -> list[dict]:
     """Return recent history entries as dicts."""
-    db = _connect()
+    db = _connect(db_path)
     rows = db.execute(
         "SELECT id, timestamp, command, prompt, model, samples, elapsed, claims_json, verdict "
         "FROM checks ORDER BY id DESC LIMIT ?", (limit,)
@@ -60,9 +69,9 @@ def get_history(limit: int = 20) -> list[dict]:
     ]
 
 
-def clear_history():
+def clear_history(db_path: Path | None = None) -> None:
     """Delete all history."""
-    db = _connect()
+    db = _connect(db_path)
     db.execute("DELETE FROM checks")
     db.commit()
     db.close()

@@ -3,3 +3,5 @@ __pycache__/
 .env
 *.db
 .confab/
+.coverage
+*.egg-info/

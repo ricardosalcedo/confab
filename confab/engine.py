@@ -18,14 +18,16 @@ class Claim:
 
     @property
     def level(self) -> str:
-        if self.confidence >= 0.8: return "high"
-        if self.confidence >= 0.5: return "medium"
+        if self.confidence >= 0.8:
+            return "high"
+        if self.confidence >= 0.5:
+            return "medium"
         return "low"
 
 
 def extract_claims(text: str) -> list[str]:
     """Split text into sentence-level claims. Handles prose, bullets, numbered lists."""
-    claims = []
+    claims: list[str] = []
     for line in text.strip().split('\n'):
         line = re.sub(r'^(?:[\-\*•]\s*|\d+[\.\)]\s*)', '', line.strip())
         if not line:
@@ -53,7 +55,7 @@ def score_claims(primary_response: str, all_responses: list[str]) -> list[Claim]
     claims = extract_claims(primary_response)
     other_texts = [_normalize(r) for r in all_responses[1:]]
     n = len(all_responses)
-    scored = []
+    scored: list[Claim] = []
 
     for claim_text in claims:
         words = _content_words(claim_text)
@@ -73,5 +75,5 @@ def score_claims(primary_response: str, all_responses: list[str]) -> list[Claim]
 
 def annotate_response(claims: list[Claim]) -> str:
     """Format claims with confidence icons."""
-    icons = {"high": "🟢", "medium": "🟡", "low": "🔴"}
+    icons = {"high": "\U0001f7e2", "medium": "\U0001f7e1", "low": "\U0001f534"}
     return '\n'.join(f"{icons[c.level]} [{c.level} {c.confidence:.0%}] {c.text}" for c in claims)

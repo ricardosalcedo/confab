@@ -42,7 +42,7 @@ class TestCLI:
         with patch("sys.argv", ["confab", "--version"]), pytest.raises(SystemExit) as exc:
             main()
         assert exc.value.code == 0
-        assert "0.3.0" in capsys.readouterr().out
+        assert "0.4.0" in capsys.readouterr().out
 
     def test_check_demo(self, capsys):
         with patch("sys.argv", ["confab", "--demo", "check", "Who created Python?"]):

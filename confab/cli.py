@@ -10,7 +10,8 @@ import time
 import confab
 from confab.db import clear_history, get_history, save_check
 from confab.engine import annotate_response, score_claims
-from confab.llm import DEMO_RESPONSES, DEMO_VERIFY_RESPONSES, call_llm, call_llm_n
+from confab.llm import DEMO_RESPONSES, DEMO_VERIFY_RESPONSES
+from confab.providers import call_provider, call_provider_n
 from confab.proxy import serve as proxy_serve
 
 DEFAULT_MODEL = "gpt-4o-mini"
@@ -60,7 +61,7 @@ async def cmd_check(args):
     if args.demo:
         responses = DEMO_RESPONSES[:n]
     else:
-        responses = await call_llm_n(prompt, n, model, temp, _require_api_key(args), args.base_url)
+        responses = await call_provider_n(prompt, n, model, temp, _require_api_key(args), args.base_url)
 
     elapsed = time.time() - start
     claims = score_claims(responses[0], responses)
@@ -110,11 +111,11 @@ async def cmd_verify(args):
         cross_response = DEMO_VERIFY_RESPONSES[1] if cross_model else None
     else:
         api_key = _require_api_key(args)
-        response = await call_llm(verify_prompt, model, 0.0, api_key, args.base_url)
+        response = await call_provider(verify_prompt, model, 0.0, api_key, args.base_url)
         cross_response = None
         if cross_model:
             print(f"   🔄 Cross-checking with {cross_model}...")
-            cross_response = await call_llm(verify_prompt, cross_model, 0.0, api_key, args.base_url)
+            cross_response = await call_provider(verify_prompt, cross_model, 0.0, api_key, args.base_url)
 
     elapsed = time.time() - start
     verdict = _get_verdict(response)
@@ -176,6 +177,7 @@ def cmd_proxy(args):
         "demo": args.demo, "port": args.port,
         "api_key": args.api_key or os.environ.get("OPENAI_API_KEY", ""),
         "base_url": args.base_url,
+        "provider": getattr(args, "provider", "auto"),
     }
     if not conf["demo"] and not conf["api_key"]:
         print("ERROR: Set OPENAI_API_KEY or pass --api-key (or use --demo)", file=sys.stderr)
@@ -189,6 +191,7 @@ def main():
     parser = argparse.ArgumentParser(prog="confab", description="Inline hallucination confidence via self-consistency.")
     parser.add_argument("--version", action="version", version=f"confab {confab.__version__}")
     parser.add_argument("--model", "-m", default=DEFAULT_MODEL)
+    parser.add_argument("--provider", default="auto", help="Provider: auto, openai, anthropic, ollama, bedrock")
     parser.add_argument("--api-key", "-k", help="API key (or set OPENAI_API_KEY)")
     parser.add_argument("--base-url", default="https://api.openai.com/v1")
     parser.add_argument("-n", type=int, default=DEFAULT_N, help=f"Samples (default: {DEFAULT_N})")

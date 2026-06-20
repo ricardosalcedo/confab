@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "confab-llm"
-version = "0.3.0"
+version = "0.4.0"
 description = "Inline hallucination confidence for LLMs via self-consistency"
 readme = "README.md"
 license = "MIT"
@@ -20,7 +20,8 @@ classifiers = [
 dependencies = ["httpx>=0.25.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-cov>=4.0", "ruff>=0.4", "mypy>=1.8"]
+proxy = ["starlette>=0.37.0", "uvicorn>=0.29.0"]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "pytest-cov>=4.0", "ruff>=0.4", "mypy>=1.8", "starlette>=0.37.0", "uvicorn>=0.29.0", "httpx>=0.25.0"]
 
 [project.scripts]
 confab = "confab.cli:main"
@@ -38,6 +39,7 @@ select = ["E", "F", "I", "N", "W"]
 
 [tool.ruff.lint.per-file-ignores]
 "confab/llm.py" = ["E501"]
+"tests/test_proxy.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"
@@ -51,4 +53,4 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["confab"]
-omit = ["confab/__main__.py"]
+omit = ["confab/__main__.py", "confab/proxy.py"]

@@ -1,0 +1,11 @@
+{
+  "name": "confab-client",
+  "version": "0.5.0",
+  "description": "JavaScript client for the Confab hallucination confidence proxy",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "MIT",
+  "keywords": ["llm", "hallucination", "confidence", "ai"],
+  "repository": "https://github.com/ricardosalcedo/confab",
+  "files": ["index.js", "index.d.ts"]
+}

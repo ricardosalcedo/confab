@@ -9,10 +9,11 @@ import time
 
 import confab
 from confab.db import clear_history, get_history, save_check
-from confab.engine import annotate_response, score_claims
+from confab.engine import annotate_response
 from confab.llm import DEMO_RESPONSES, DEMO_VERIFY_RESPONSES
 from confab.providers import call_provider, call_provider_n
 from confab.proxy import serve as proxy_serve
+from confab.scoring import score
 
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_N = 5
@@ -37,6 +38,10 @@ def _require_api_key(args) -> str:
         print("ERROR: Set OPENAI_API_KEY or pass --api-key", file=sys.stderr)
         sys.exit(1)
     return key
+
+
+def _get_api_key(args) -> str:
+    return args.api_key or os.environ.get("OPENAI_API_KEY", "")
 
 
 def _get_verdict(text: str) -> str:
@@ -64,7 +69,8 @@ async def cmd_check(args):
         responses = await call_provider_n(prompt, n, model, temp, _require_api_key(args), args.base_url)
 
     elapsed = time.time() - start
-    claims = score_claims(responses[0], responses)
+    backend = getattr(args, "scoring", "fast")
+    claims = await score(responses[0], responses, backend=backend, api_key=_get_api_key(args), base_url=args.base_url)
     annotated = annotate_response(claims)
 
     print(f"📋 Prompt: {prompt}\n")
@@ -198,6 +204,8 @@ def main():
     parser.add_argument("--temperature", "-t", type=float, default=DEFAULT_TEMP)
     parser.add_argument("--demo", action="store_true", help="Canned responses, no API key needed")
     parser.add_argument("--json", action="store_true", help="JSON output")
+    parser.add_argument("--scoring", default="fast", choices=["fast", "accurate", "nli"],
+                        help="Scoring backend: fast (word-overlap), accurate (embeddings), nli (LLM judge)")
 
     sub = parser.add_subparsers(dest="command")
 

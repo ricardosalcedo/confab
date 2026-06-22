@@ -37,7 +37,7 @@ async def call_llm(prompt: str, model: str, temperature: float, api_key: str, ba
         )
         resp.raise_for_status()
         data: dict = resp.json()
-        return data["choices"][0]["message"]["content"]
+        return str(data["choices"][0]["message"]["content"])
 
 
 async def call_llm_n(prompt: str, n: int, model: str, temperature: float, api_key: str, base_url: str) -> list[str]:

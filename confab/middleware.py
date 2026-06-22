@@ -83,7 +83,7 @@ class ConfabResult:
         """Average confidence across all claims."""
         if not self.claims:
             return 1.0
-        return sum(c.confidence for c in self.claims) / len(self.claims)
+        return float(sum(c.confidence for c in self.claims) / len(self.claims))
 
     @property
     def high_confidence_claims(self) -> list:

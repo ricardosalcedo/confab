@@ -102,7 +102,7 @@ async def _call_openai_compat(prompt: str, model: str, temperature: float, api_k
                 json={"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": temperature},
             )
             resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
+            return str(resp.json()["choices"][0]["message"]["content"])
 
     return await _retry(_do)
 
@@ -129,7 +129,7 @@ async def _call_anthropic(prompt: str, model: str, temperature: float, api_key: 
                 },
             )
             resp.raise_for_status()
-            return resp.json()["content"][0]["text"]
+            return str(resp.json()["content"][0]["text"])
 
     return await _retry(_do)
 

@@ -5,3 +5,5 @@ __pycache__/
 .confab/
 .coverage
 *.egg-info/
+infra/node_modules/
+infra/cdk.out/

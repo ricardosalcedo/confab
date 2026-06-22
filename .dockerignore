@@ -1,0 +1,10 @@
+__pycache__
+*.pyc
+.git
+.github
+tests
+infra/node_modules
+infra/cdk.out
+*.egg-info
+.coverage
+.confab

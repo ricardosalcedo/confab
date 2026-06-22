@@ -104,7 +104,8 @@ async def _call_openai_compat(prompt: str, model: str, temperature: float, api_k
             resp.raise_for_status()
             return str(resp.json()["choices"][0]["message"]["content"])
 
-    return await _retry(_do)
+    result: str = await _retry(_do)
+    return result
 
 
 async def _call_anthropic(prompt: str, model: str, temperature: float, api_key: str, base_url: str = "") -> str:
@@ -131,7 +132,8 @@ async def _call_anthropic(prompt: str, model: str, temperature: float, api_key: 
             resp.raise_for_status()
             return str(resp.json()["content"][0]["text"])
 
-    return await _retry(_do)
+    result: str = await _retry(_do)
+    return result
 
 
 async def _call_bedrock(prompt: str, model: str, temperature: float) -> str:

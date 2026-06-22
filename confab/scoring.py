@@ -23,16 +23,15 @@ def score_word_overlap(primary_response: str, all_responses: list[str]) -> list[
 
     for claim_text in claims:
         words = _content_words(claim_text)
-        support = sum(
-            1 for other in other_texts
-            if sum(1 for w in words if w in other) / max(len(words), 1) > 0.5
+        support = sum(1 for other in other_texts if sum(1 for w in words if w in other) / max(len(words), 1) > 0.5)
+        scored.append(
+            Claim(
+                text=claim_text,
+                confidence=(support + 1) / n,
+                support_count=support + 1,
+                total_samples=n,
+            )
         )
-        scored.append(Claim(
-            text=claim_text,
-            confidence=(support + 1) / n,
-            support_count=support + 1,
-            total_samples=n,
-        ))
     return scored
 
 
@@ -84,7 +83,7 @@ async def score_embeddings(
     embeddings = await _get_embeddings(all_texts, api_key, base_url, model)
 
     claim_embeddings = embeddings[: len(claims_text)]
-    response_embeddings = embeddings[len(claims_text):]
+    response_embeddings = embeddings[len(claims_text) :]
 
     scored: list[Claim] = []
     for i, claim_text in enumerate(claims_text):
@@ -93,12 +92,14 @@ async def score_embeddings(
         # Threshold: similarity > 0.5 counts as support
         support = sum(1 for s in sims if s > 0.5)
         confidence = (support + 1) / n
-        scored.append(Claim(
-            text=claim_text,
-            confidence=confidence,
-            support_count=support + 1,
-            total_samples=n,
-        ))
+        scored.append(
+            Claim(
+                text=claim_text,
+                confidence=confidence,
+                support_count=support + 1,
+                total_samples=n,
+            )
+        )
     return scored
 
 
@@ -149,12 +150,14 @@ async def score_nli(
         tasks = [_check_entailment(claim_text, r) for r in other_responses]
         results = await asyncio.gather(*tasks)
         support = sum(results)
-        scored.append(Claim(
-            text=claim_text,
-            confidence=(support + 1) / n,
-            support_count=support + 1,
-            total_samples=n,
-        ))
+        scored.append(
+            Claim(
+                text=claim_text,
+                confidence=(support + 1) / n,
+                support_count=support + 1,
+                total_samples=n,
+            )
+        )
     return scored
 
 

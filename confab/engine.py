@@ -3,14 +3,38 @@
 import re
 from dataclasses import dataclass
 
-STOPWORDS = frozenset({'the', 'a', 'an', 'is', 'was', 'were', 'are', 'it', 'its',
-                       'and', 'or', 'of', 'in', 'to', 'for', 'with', 'by', 'that',
-                       'this', 'from', 'on', 'as'})
+STOPWORDS = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "is",
+        "was",
+        "were",
+        "are",
+        "it",
+        "its",
+        "and",
+        "or",
+        "of",
+        "in",
+        "to",
+        "for",
+        "with",
+        "by",
+        "that",
+        "this",
+        "from",
+        "on",
+        "as",
+    }
+)
 
 
 @dataclass
 class Claim:
     """A single extracted claim with confidence score."""
+
     text: str
     confidence: float  # 0.0–1.0
     support_count: int
@@ -28,20 +52,20 @@ class Claim:
 def extract_claims(text: str) -> list[str]:
     """Split text into sentence-level claims. Handles prose, bullets, numbered lists."""
     claims: list[str] = []
-    for line in text.strip().split('\n'):
-        line = re.sub(r'^(?:[\-\*•]\s*|\d+[\.\)]\s*)', '', line.strip())
+    for line in text.strip().split("\n"):
+        line = re.sub(r"^(?:[\-\*•]\s*|\d+[\.\)]\s*)", "", line.strip())
         if not line:
             continue
-        if ':' in line and len(line.split(':')) == 2:
+        if ":" in line and len(line.split(":")) == 2:
             claims.append(line)
         else:
-            claims.extend(s.strip() for s in re.split(r'(?<=[.!?])\s+', line) if len(s.strip()) > 10)
+            claims.extend(s.strip() for s in re.split(r"(?<=[.!?])\s+", line) if len(s.strip()) > 10)
     return claims
 
 
 def _normalize(text: str) -> str:
     """Lowercase, strip punctuation for fuzzy matching."""
-    return re.sub(r'[^a-z0-9 ]', '', text.lower()).strip()
+    return re.sub(r"[^a-z0-9 ]", "", text.lower()).strip()
 
 
 def _content_words(text: str) -> list[str]:
@@ -59,16 +83,15 @@ def score_claims(primary_response: str, all_responses: list[str]) -> list[Claim]
 
     for claim_text in claims:
         words = _content_words(claim_text)
-        support = sum(
-            1 for other in other_texts
-            if sum(1 for w in words if w in other) / max(len(words), 1) > 0.5
+        support = sum(1 for other in other_texts if sum(1 for w in words if w in other) / max(len(words), 1) > 0.5)
+        scored.append(
+            Claim(
+                text=claim_text,
+                confidence=(support + 1) / n,
+                support_count=support + 1,
+                total_samples=n,
+            )
         )
-        scored.append(Claim(
-            text=claim_text,
-            confidence=(support + 1) / n,
-            support_count=support + 1,
-            total_samples=n,
-        ))
 
     return scored
 
@@ -76,4 +99,4 @@ def score_claims(primary_response: str, all_responses: list[str]) -> list[Claim]
 def annotate_response(claims: list[Claim]) -> str:
     """Format claims with confidence icons."""
     icons = {"high": "\U0001f7e2", "medium": "\U0001f7e1", "low": "\U0001f534"}
-    return '\n'.join(f"{icons[c.level]} [{c.level} {c.confidence:.0%}] {c.text}" for c in claims)
+    return "\n".join(f"{icons[c.level]} [{c.level} {c.confidence:.0%}] {c.text}" for c in claims)

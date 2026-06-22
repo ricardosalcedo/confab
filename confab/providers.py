@@ -85,15 +85,15 @@ async def call_provider_n(
     provider: str = "auto",
 ) -> list[str]:
     """Send prompt N times in parallel."""
-    results = await asyncio.gather(*[
-        call_provider(prompt, model, temperature, api_key, base_url, provider)
-        for _ in range(n)
-    ])
+    results = await asyncio.gather(
+        *[call_provider(prompt, model, temperature, api_key, base_url, provider) for _ in range(n)]
+    )
     return list(results)
 
 
 async def _call_openai_compat(prompt: str, model: str, temperature: float, api_key: str, base_url: str) -> str:
     """OpenAI-compatible API call (OpenAI, Ollama, vLLM, etc.)."""
+
     async def _do():
         async with httpx.AsyncClient(timeout=60) as client:
             resp = await client.post(
@@ -103,6 +103,7 @@ async def _call_openai_compat(prompt: str, model: str, temperature: float, api_k
             )
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"]
+
     return await _retry(_do)
 
 
@@ -129,6 +130,7 @@ async def _call_anthropic(prompt: str, model: str, temperature: float, api_key: 
             )
             resp.raise_for_status()
             return resp.json()["content"][0]["text"]
+
     return await _retry(_do)
 
 

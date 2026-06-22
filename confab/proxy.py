@@ -39,7 +39,10 @@ def _build_app(conf: dict[str, Any]) -> Any:
             responses = DEMO_RESPONSES[:n]
         else:
             responses = await call_provider_n(
-                prompt, n, model, temp,
+                prompt,
+                n,
+                model,
+                temp,
                 api_key=conf.get("api_key", ""),
                 base_url=conf.get("base_url", ""),
                 provider=conf.get("provider", "auto"),
@@ -158,11 +161,16 @@ def _serve_legacy(conf: dict[str, Any]) -> None:
             if conf["demo"]:
                 responses = DEMO_RESPONSES[:n]
             else:
-                responses = asyncio.run(call_provider_n(
-                    prompt, n, model, temp,
-                    api_key=conf.get("api_key", ""),
-                    base_url=conf.get("base_url", ""),
-                ))
+                responses = asyncio.run(
+                    call_provider_n(
+                        prompt,
+                        n,
+                        model,
+                        temp,
+                        api_key=conf.get("api_key", ""),
+                        base_url=conf.get("base_url", ""),
+                    )
+                )
 
             claims = score_claims(responses[0], responses)
             result: dict[str, Any] = {

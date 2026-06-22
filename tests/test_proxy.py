@@ -37,7 +37,9 @@ def demo_proxy():
                 "object": "chat.completion",
                 "created": 0,
                 "model": "gpt-4o-mini",
-                "choices": [{"index": 0, "message": {"role": "assistant", "content": responses[0]}, "finish_reason": "stop"}],
+                "choices": [
+                    {"index": 0, "message": {"role": "assistant", "content": responses[0]}, "finish_reason": "stop"}
+                ],
                 "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
                 "confab_metadata": {
                     "samples": 3,
@@ -63,12 +65,13 @@ def demo_proxy():
 class TestProxy:
     def test_completions_endpoint(self, demo_proxy: int):
         conn = HTTPConnection("127.0.0.1", demo_proxy)
-        body = json.dumps({
-            "model": "gpt-4o-mini",
-            "messages": [{"role": "user", "content": "Tell me about Python"}],
-        })
-        conn.request("POST", "/v1/chat/completions", body=body,
-                     headers={"Content-Type": "application/json"})
+        body = json.dumps(
+            {
+                "model": "gpt-4o-mini",
+                "messages": [{"role": "user", "content": "Tell me about Python"}],
+            }
+        )
+        conn.request("POST", "/v1/chat/completions", body=body, headers={"Content-Type": "application/json"})
         resp = conn.getresponse()
         assert resp.status == 200
 
@@ -81,11 +84,12 @@ class TestProxy:
     def test_returns_raw_response(self, demo_proxy: int):
         """New behavior: response content is raw, not annotated."""
         conn = HTTPConnection("127.0.0.1", demo_proxy)
-        body = json.dumps({
-            "messages": [{"role": "user", "content": "Tell me about Python"}],
-        })
-        conn.request("POST", "/v1/chat/completions", body=body,
-                     headers={"Content-Type": "application/json"})
+        body = json.dumps(
+            {
+                "messages": [{"role": "user", "content": "Tell me about Python"}],
+            }
+        )
+        conn.request("POST", "/v1/chat/completions", body=body, headers={"Content-Type": "application/json"})
         data = json.loads(conn.getresponse().read())
         content = data["choices"][0]["message"]["content"]
         # Raw response should NOT have confidence icons
@@ -94,11 +98,12 @@ class TestProxy:
 
     def test_claims_have_required_fields(self, demo_proxy: int):
         conn = HTTPConnection("127.0.0.1", demo_proxy)
-        body = json.dumps({
-            "messages": [{"role": "user", "content": "Tell me about Python"}],
-        })
-        conn.request("POST", "/v1/chat/completions", body=body,
-                     headers={"Content-Type": "application/json"})
+        body = json.dumps(
+            {
+                "messages": [{"role": "user", "content": "Tell me about Python"}],
+            }
+        )
+        conn.request("POST", "/v1/chat/completions", body=body, headers={"Content-Type": "application/json"})
         data = json.loads(conn.getresponse().read())
 
         for claim in data["confab_metadata"]["claims"]:

@@ -55,6 +55,7 @@ def _get_verdict(text: str) -> str:
 
 # --- Commands ---
 
+
 async def cmd_check(args):
     """Run self-consistency check."""
     prompt = _read_input(args.prompt)
@@ -87,7 +88,10 @@ async def cmd_check(args):
 
     if args.json:
         data = {
-            "prompt": prompt, "model": model, "samples": n, "elapsed": elapsed,
+            "prompt": prompt,
+            "model": model,
+            "samples": n,
+            "elapsed": elapsed,
             "claims": [
                 {"text": c.text, "confidence": c.confidence, "level": c.level, "support": c.support_count}
                 for c in claims
@@ -179,8 +183,11 @@ def cmd_history(args):
 def cmd_proxy(args):
     """Start proxy server."""
     conf = {
-        "model": args.model, "n": args.n, "temperature": args.temperature,
-        "demo": args.demo, "port": args.port,
+        "model": args.model,
+        "n": args.n,
+        "temperature": args.temperature,
+        "demo": args.demo,
+        "port": args.port,
         "api_key": args.api_key or os.environ.get("OPENAI_API_KEY", ""),
         "base_url": args.base_url,
         "provider": getattr(args, "provider", "auto"),
@@ -193,6 +200,7 @@ def cmd_proxy(args):
 
 # --- Main ---
 
+
 def main():
     parser = argparse.ArgumentParser(prog="confab", description="Inline hallucination confidence via self-consistency.")
     parser.add_argument("--version", action="version", version=f"confab {confab.__version__}")
@@ -204,8 +212,12 @@ def main():
     parser.add_argument("--temperature", "-t", type=float, default=DEFAULT_TEMP)
     parser.add_argument("--demo", action="store_true", help="Canned responses, no API key needed")
     parser.add_argument("--json", action="store_true", help="JSON output")
-    parser.add_argument("--scoring", default="fast", choices=["fast", "accurate", "nli"],
-                        help="Scoring backend: fast (word-overlap), accurate (embeddings), nli (LLM judge)")
+    parser.add_argument(
+        "--scoring",
+        default="fast",
+        choices=["fast", "accurate", "nli"],
+        help="Scoring backend: fast (word-overlap), accurate (embeddings), nli (LLM judge)",
+    )
 
     sub = parser.add_subparsers(dest="command")
 

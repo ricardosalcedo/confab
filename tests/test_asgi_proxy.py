@@ -17,8 +17,13 @@ except ImportError:
 pytestmark = pytest.mark.skipif(not HAS_STARLETTE, reason="starlette not installed")
 
 DEMO_CONF = {
-    "model": "gpt-4o-mini", "n": 3, "temperature": 0.8,
-    "demo": True, "api_key": "", "base_url": "", "provider": "auto",
+    "model": "gpt-4o-mini",
+    "n": 3,
+    "temperature": 0.8,
+    "demo": True,
+    "api_key": "",
+    "base_url": "",
+    "provider": "auto",
 }
 
 
@@ -35,9 +40,12 @@ class TestASGIProxy:
         assert resp.json()["status"] == "ok"
 
     def test_completions(self, client):
-        resp = client.post("/v1/chat/completions", json={
-            "messages": [{"role": "user", "content": "Tell me about Python"}],
-        })
+        resp = client.post(
+            "/v1/chat/completions",
+            json={
+                "messages": [{"role": "user", "content": "Tell me about Python"}],
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["object"] == "chat.completion"
@@ -48,9 +56,12 @@ class TestASGIProxy:
         assert "[high" not in content
 
     def test_completions_metadata_structure(self, client):
-        resp = client.post("/v1/chat/completions", json={
-            "messages": [{"role": "user", "content": "Tell me about Python"}],
-        })
+        resp = client.post(
+            "/v1/chat/completions",
+            json={
+                "messages": [{"role": "user", "content": "Tell me about Python"}],
+            },
+        )
         data = resp.json()
         meta = data["confab_metadata"]
         assert meta["samples"] == 3
@@ -60,10 +71,13 @@ class TestASGIProxy:
             assert "level" in claim
 
     def test_streaming(self, client):
-        resp = client.post("/v1/chat/completions", json={
-            "messages": [{"role": "user", "content": "Tell me about Python"}],
-            "stream": True,
-        })
+        resp = client.post(
+            "/v1/chat/completions",
+            json={
+                "messages": [{"role": "user", "content": "Tell me about Python"}],
+                "stream": True,
+            },
+        )
         assert resp.status_code == 200
         assert "text/event-stream" in resp.headers["content-type"]
 

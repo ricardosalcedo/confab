@@ -42,10 +42,12 @@ def save_check(
     db_path: Path | None = None,
 ) -> None:
     """Persist a check or verify result."""
-    claims_json = json.dumps([
-        {"text": c.text, "confidence": c.confidence, "level": c.level, "support": c.support_count}
-        for c in (claims or [])
-    ])
+    claims_json = json.dumps(
+        [
+            {"text": c.text, "confidence": c.confidence, "level": c.level, "support": c.support_count}
+            for c in (claims or [])
+        ]
+    )
     db = _connect(db_path)
     db.execute(
         "INSERT INTO checks (command, prompt, model, samples, elapsed, claims_json, verdict) VALUES (?,?,?,?,?,?,?)",
@@ -60,7 +62,8 @@ def get_history(limit: int = 20, db_path: Path | None = None) -> list[dict]:
     db = _connect(db_path)
     rows = db.execute(
         "SELECT id, timestamp, command, prompt, model, samples, elapsed, claims_json, verdict "
-        "FROM checks ORDER BY id DESC LIMIT ?", (limit,)
+        "FROM checks ORDER BY id DESC LIMIT ?",
+        (limit,),
     ).fetchall()
     db.close()
     return [

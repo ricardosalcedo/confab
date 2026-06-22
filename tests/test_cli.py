@@ -63,47 +63,63 @@ class TestCLI:
         assert "SUPPORTED" in output
 
     def test_check_no_api_key_exits(self):
-        with patch("sys.argv", ["confab", "check", "test"]), \
-             patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False), \
-             pytest.raises(SystemExit):
+        with (
+            patch("sys.argv", ["confab", "check", "test"]),
+            patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False),
+            pytest.raises(SystemExit),
+        ):
             main()
 
     def test_history_empty(self, capsys, tmp_path):
-        with patch("sys.argv", ["confab", "history"]), \
-             patch("confab.cli.get_history", return_value=[]):
+        with patch("sys.argv", ["confab", "history"]), patch("confab.cli.get_history", return_value=[]):
             main()
         output = capsys.readouterr().out
         assert "No history" in output
 
 
-
 class TestCLIHistory:
     def test_history_with_entries(self, capsys):
         mock_rows = [
-            {"id": 1, "timestamp": "2024-01-01", "command": "check", "prompt": "test prompt",
-             "model": "gpt-4o-mini", "samples": 5, "elapsed": 1.2,
-             "claims_json": '[{"level": "high"}, {"level": "low"}]', "verdict": None},
-            {"id": 2, "timestamp": "2024-01-02", "command": "verify", "prompt": "a claim",
-             "model": "gpt-4o", "samples": 1, "elapsed": 0.5,
-             "claims_json": "[]", "verdict": "SUPPORTED"},
+            {
+                "id": 1,
+                "timestamp": "2024-01-01",
+                "command": "check",
+                "prompt": "test prompt",
+                "model": "gpt-4o-mini",
+                "samples": 5,
+                "elapsed": 1.2,
+                "claims_json": '[{"level": "high"}, {"level": "low"}]',
+                "verdict": None,
+            },
+            {
+                "id": 2,
+                "timestamp": "2024-01-02",
+                "command": "verify",
+                "prompt": "a claim",
+                "model": "gpt-4o",
+                "samples": 1,
+                "elapsed": 0.5,
+                "claims_json": "[]",
+                "verdict": "SUPPORTED",
+            },
         ]
-        with patch("sys.argv", ["confab", "history"]), \
-             patch("confab.cli.get_history", return_value=mock_rows):
+        with patch("sys.argv", ["confab", "history"]), patch("confab.cli.get_history", return_value=mock_rows):
             main()
         output = capsys.readouterr().out
         assert "test prompt" in output
         assert "SUPPORTED" in output
 
     def test_history_clear(self, capsys):
-        with patch("sys.argv", ["confab", "history", "--clear"]), \
-             patch("confab.cli.clear_history") as mock_clear:
+        with patch("sys.argv", ["confab", "history", "--clear"]), patch("confab.cli.clear_history") as mock_clear:
             main()
         mock_clear.assert_called_once()
 
 
 class TestCLIProxy:
     def test_proxy_no_key_exits(self):
-        with patch("sys.argv", ["confab", "proxy"]), \
-             patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False), \
-             pytest.raises(SystemExit):
+        with (
+            patch("sys.argv", ["confab", "proxy"]),
+            patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False),
+            pytest.raises(SystemExit),
+        ):
             main()

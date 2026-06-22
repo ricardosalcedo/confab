@@ -1,6 +1,6 @@
 """Tests for confab.middleware."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from confab.middleware import ConfabClient, ConfabResult
 

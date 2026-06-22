@@ -54,3 +54,8 @@ testpaths = ["tests"]
 [tool.coverage.run]
 source = ["confab"]
 omit = ["confab/__main__.py", "confab/proxy.py"]
+
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101", "B104", "B324"]

@@ -7,26 +7,50 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - name: Lint
+        run: ruff check confab/ tests/
+      - name: Format check
+        run: ruff format --check confab/ tests/
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install bandit[toml] detect-secrets
+      - name: SAST (Bandit)
+        run: bandit -c pyproject.toml -r confab/
+      - name: Secrets scan
+        run: detect-secrets scan --baseline .secrets.baseline --exclude-files 'infra/package-lock.json'
+
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
-
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: pip install -e ".[dev]"
-
-      - name: Lint
-        run: ruff check confab/ tests/
-
+      - run: pip install -e ".[dev]"
       - name: Type check
         run: mypy confab/ --ignore-missing-imports
-
       - name: Test
-        run: pytest --cov=confab --cov-report=term-missing --cov-fail-under=80
+        run: pytest --cov=confab --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false

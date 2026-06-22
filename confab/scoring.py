@@ -125,8 +125,7 @@ async def score_nli(
     async def _check_entailment(claim: str, response: str) -> bool:
         """Ask if response entails claim."""
         prompt = (
-            f"Does the following text support this claim? Answer only YES or NO.\n\n"
-            f"Text: {response}\n\nClaim: {claim}"
+            f"Does the following text support this claim? Answer only YES or NO.\n\nText: {response}\n\nClaim: {claim}"
         )
         if not httpx:
             raise RuntimeError("httpx required for NLI scoring")

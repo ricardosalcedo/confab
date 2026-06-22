@@ -1,9 +1,7 @@
 # Confab
 
 [![CI](https://github.com/ricardosalcedo/confab/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardosalcedo/confab/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ricardosalcedo/confab/branch/main/graph/badge.svg)](https://codecov.io/gh/ricardosalcedo/confab)
-[![PyPI](https://img.shields.io/pypi/v/confab-llm)](https://pypi.org/project/confab-llm/)
-[![Python](https://img.shields.io/pypi/pyversions/confab-llm)](https://pypi.org/project/confab-llm/)
+[![Python](https://img.shields.io/badge/python-3.11%20|%203.12-blue)](https://github.com/ricardosalcedo/confab)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)

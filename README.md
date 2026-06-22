@@ -1,6 +1,7 @@
 # Confab
 
 [![CI](https://github.com/ricardosalcedo/confab/actions/workflows/ci.yml/badge.svg)](https://github.com/ricardosalcedo/confab/actions/workflows/ci.yml)
+[![WIP](https://img.shields.io/badge/status-WIP-orange)](https://github.com/ricardosalcedo/confab)
 [![Python](https://img.shields.io/badge/python-3.11%20|%203.12-blue)](https://github.com/ricardosalcedo/confab)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)

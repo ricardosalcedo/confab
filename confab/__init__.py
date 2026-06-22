@@ -1,4 +1,4 @@
-"""Confab — Inline hallucination confidence via self-consistency."""
+"""Confab - Inline hallucination confidence via self-consistency."""
 
 __version__ = "0.5.0"
 
